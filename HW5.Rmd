@@ -15,7 +15,79 @@ library("dplyr")
 library("tidyverse")
 library("fs")
 library("ggplot2")
+library("broom")
 ```
+
+# Question 1
+```{r}
+homicide_df = 
+  read_csv("dataQ1/homicide-data.csv", na = c("", "NA", "Unknown")) %>%
+  mutate(
+    city_state = str_c(city, state, sep = ", "),
+    resolution = case_when(
+      disposition == "Closed without arrest" ~ "unsolved",
+      disposition == "Open/No arrest"        ~ "unsolved",
+      disposition == "Closed by arrest"      ~ "solved"
+    )
+  ) %>% 
+  filter(city_state != "Tulsa, AL") 
+```
+
+The resulting dataframe has `r nrow(homicide_df)` entries, on variables that include the victim name, race, age, and sex; the date the homicide was reported; and the location of the homicide. In cleaning, I created a `city_state` variable that includes both city and state, and a `resolution` variable to indicate whether the case was closed by arrest. I also excluded one entry in Tulsa, AL, which is not a major US city and is most likely a data entry error. 
+
+In the next code chunk, I group within cities and summarize to produce the total number of homicides and the number that are solved. 
+
+```{r}
+city_homicide_df = 
+  homicide_df %>% 
+  select(city_state, disposition, resolution) %>% 
+  group_by(city_state) %>% 
+  summarize(
+    hom_total = n(),
+    hom_unsolved = sum(resolution == "unsolved"))
+```
+
+Focusing only on Baltimore, MD, I can use the `prop.test` and `broom::tidy` functions to obtain an estimate and CI of the proportion of unsolved homicides in that city. The table below shows those values.
+
+```{r}
+bmore_test = 
+  prop.test(
+    x = filter(city_homicide_df, city_state == "Baltimore, MD") %>% pull(hom_unsolved),
+    n = filter(city_homicide_df, city_state == "Baltimore, MD") %>% pull(hom_total)) 
+
+broom::tidy(bmore_test) %>% 
+  knitr::kable(digits = 3)
+```
+
+Building on this code, I can use functions in the `purrr` package to obtain estimates and CIs for the proportion of unsolved homicides in each city in my dataset. The code below implements this analysis. 
+
+```{r}
+test_results = 
+  city_homicide_df %>% 
+  mutate(
+    prop_tests = map2(hom_unsolved, hom_total, \(x, y) prop.test(x = x, n = y)),
+    tidy_tests = map(prop_tests, broom::tidy)) %>% 
+  select(-prop_tests) %>% 
+  unnest(tidy_tests) %>% 
+  select(city_state, estimate, conf.low, conf.high) %>% 
+  mutate(city_state = fct_reorder(city_state, estimate))
+```
+
+Finally, I make a plot showing the estimate (and CI) of the proportion of unsolved homicides in each city.
+
+```{r}
+test_results %>% 
+  mutate(city_state = fct_reorder(city_state, estimate)) %>% 
+  ggplot(aes(x = city_state, y = estimate)) + 
+  geom_point() + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+This figure suggests a very wide range in the rate at which homicides are solved -- Chicago is noticeably high and, given the narrowness of the CI, likely is the location of many homicides. 
+
+
+
 # Question 2
 ```{r}
 file_names <- list.files("./data")
@@ -63,17 +135,33 @@ ggplot(combined_long, aes(x = week, y = data, color = factor(observation))) +
        color = "Subject ID") +
   theme_minimal()
 ```
-Data started to drop for participants in the control group at week 6, but increased for experiment group 
+Data started to drop for some participants in the control group at week 6, but increased for experiment group 
 
-```{r}
-```
 
 # Question 3
 ```{r}
 samples <- list()
 for (i in 1 : 5000){
   single_sample <- rnorm(30, mean = 0, sd = 5)
-  samples[[i]] <- single_sample
+  t_test_result <- broom::tidy(t.test(single_sample, mu = 0))
+  samples[[i]] <- c(estimate = t_test_result$estimate[1], p_value = t_test_result$p.value)
 }
+```
+
+```{r}
+true_mu_values <- c(1, 2, 3, 4, 5, 6)
+
+results <- list()
+
+for (true_mu in true_mu_values) {
+  samples <- list()
+  for (i in 1:5000) {
+    single_sample <- rnorm(30, mean = true_mu, sd = 5)
+    t_test_result <- tidy(t.test(single_sample, mu = 0))
+    samples[[i]] <- c(estimate = t_test_result$estimate[1], p_value = t_test_result$p.value)
+  }
+  results[[as.character(true_mu)]] <- samples
+}
+
 ```
 
