@@ -191,7 +191,6 @@ estimate_data <- lapply(names(results), function(true_mu) {
 
 estimate_data <- do.call(rbind, estimate_data)
 
-# Create a data frame for rejected samples only
 rejected_data <- lapply(names(results), function(true_mu) {
   rejected_samples <- results[[true_mu]][sapply(results[[true_mu]], function(sample) sample[2] < 0.05)]
   data.frame(true_mu = as.numeric(true_mu),
@@ -200,7 +199,6 @@ rejected_data <- lapply(names(results), function(true_mu) {
 
 rejected_data <- do.call(rbind, rejected_data)
 
-# Plot 1: Average Estimate of μ̂ vs. True Value of μ
 ggplot(estimate_data, aes(x = true_mu, y = avg_mu_hat)) +
   geom_point() +
   geom_line() +
@@ -209,7 +207,6 @@ ggplot(estimate_data, aes(x = true_mu, y = avg_mu_hat)) +
        y = "Average Estimate of μ̂") +
   theme_minimal()
 
-# Plot 2: Average Estimate of μ̂ in Samples Where Null Was Rejected vs. True Value of μ
 ggplot() +
   geom_point(data = estimate_data, aes(x = true_mu, y = avg_mu_hat), color = "blue") +
   geom_point(data = rejected_data, aes(x = true_mu, y = avg_mu_hat_rejected), color = "red") +
