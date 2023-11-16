@@ -139,6 +139,8 @@ Data started to drop for some participants in the control group at week 6, but i
 
 
 # Question 3
+
+making random samples
 ```{r}
 samples <- list()
 for (i in 1 : 5000){
@@ -148,6 +150,7 @@ for (i in 1 : 5000){
 }
 ```
 
+repeat for other mu values
 ```{r}
 true_mu_values <- c(1, 2, 3, 4, 5, 6)
 
