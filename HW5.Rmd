@@ -165,3 +165,59 @@ for (true_mu in true_mu_values) {
 
 ```
 
+```{r}
+power_data <- lapply(names(results), function(true_mu) {
+  data.frame(true_mu = rep(true_mu, 5000),
+             power = mean(sapply(results[[true_mu]], function(sample) sample[2] < 0.05)))
+})
+
+power_data <- do.call(rbind, power_data)
+
+ggplot(power_data, aes(x = as.numeric(true_mu), y = power)) +
+  geom_point() +
+  geom_line() +
+  labs(title = "Power vs. True Value of μ",
+       x = "True Value of μ",
+       y = "Proportion of Rejected Null Hypotheses (Power)") +
+  theme_minimal()
+```
+As the true value of μ increases, signifying larger effect sizes, the power of the test also increases. 
+
+```{r}
+estimate_data <- lapply(names(results), function(true_mu) {
+  data.frame(true_mu = as.numeric(true_mu),
+             avg_mu_hat = mean(sapply(results[[true_mu]], function(sample) sample[1])))
+})
+
+estimate_data <- do.call(rbind, estimate_data)
+
+# Create a data frame for rejected samples only
+rejected_data <- lapply(names(results), function(true_mu) {
+  rejected_samples <- results[[true_mu]][sapply(results[[true_mu]], function(sample) sample[2] < 0.05)]
+  data.frame(true_mu = as.numeric(true_mu),
+             avg_mu_hat_rejected = mean(sapply(rejected_samples, function(sample) sample[1])))
+})
+
+rejected_data <- do.call(rbind, rejected_data)
+
+# Plot 1: Average Estimate of μ̂ vs. True Value of μ
+ggplot(estimate_data, aes(x = true_mu, y = avg_mu_hat)) +
+  geom_point() +
+  geom_line() +
+  labs(title = "Average Estimate of μ̂ vs. True Value of μ",
+       x = "True Value of μ",
+       y = "Average Estimate of μ̂") +
+  theme_minimal()
+
+# Plot 2: Average Estimate of μ̂ in Samples Where Null Was Rejected vs. True Value of μ
+ggplot() +
+  geom_point(data = estimate_data, aes(x = true_mu, y = avg_mu_hat), color = "blue") +
+  geom_point(data = rejected_data, aes(x = true_mu, y = avg_mu_hat_rejected), color = "red") +
+  geom_line(data = estimate_data, aes(x = true_mu, y = avg_mu_hat), color = "blue") +
+  geom_line(data = rejected_data, aes(x = true_mu, y = avg_mu_hat_rejected), color = "red") +
+  labs(title = "Average Estimate of μ̂ vs. True Value of μ (Null Rejected Samples)",
+       x = "True Value of μ",
+       y = "Average Estimate of μ̂") +
+  theme_minimal()
+```
+The sample average of μ̂ across tests for which the null is rejected approximately equal to the true value of μ. The estimated mean is expected to be a reliable indicator of the true population mean, especially when the null hypothesis is false.
