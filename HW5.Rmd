@@ -1,0 +1,79 @@
+---
+title: "hw5"
+author: "Tongxi Yu"
+date: "2023-11-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("purrr")
+library("dplyr")
+library("tidyverse")
+library("fs")
+library("ggplot2")
+```
+# Question 2
+```{r}
+file_names <- list.files("./data")
+file_df <- data.frame(file_name = file_names)
+file_paths <- fs::dir_ls("./data")
+file_paths
+```
+
+```{r}
+file_contents <- file_paths |>
+  map(function(path){
+    read.csv(path)
+  })
+```
+
+Tidying the data
+```{r}
+combined_df <- bind_cols(file_df, bind_rows(file_contents)) |>
+  mutate(file_name = str_remove(file_name, "\\.csv"))|>
+  rename(observation = file_name)
+combined_df <- combined_df |>
+  mutate(group_color = case_when(
+    startsWith(observation, "con") ~ "Control",
+    startsWith(observation, "exp") ~ "Experiment",
+    TRUE ~ NA_character_
+  ))
+```
+
+Plot the data
+```{r}
+combined_long <- combined_df |>
+  gather(key = "week", value = "data", starts_with("week"))
+
+combined_long$week <- as.numeric(gsub("week_", "", combined_long$week))
+```
+
+
+```{r}
+ggplot(combined_long, aes(x = week, y = data, color = factor(observation))) +
+  geom_line() +
+  facet_wrap(~1, scales = "free_y") +
+  labs(title = "Spaghetti Plot of Observations Over Time",
+       x = "Week",
+       y = "Observation",
+       color = "Subject ID") +
+  theme_minimal()
+```
+Data started to drop for participants in the control group at week 6, but increased for experiment group 
+
+```{r}
+```
+
+# Question 3
+```{r}
+samples <- list()
+for (i in 1 : 5000){
+  single_sample <- rnorm(30, mean = 0, sd = 5)
+  samples[[i]] <- single_sample
+}
+```
+
